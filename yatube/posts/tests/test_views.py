@@ -1,8 +1,7 @@
 from http import HTTPStatus
-
 from django import forms
+from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
 from django.urls import reverse
 
 from ..models import Group, Post
@@ -112,6 +111,7 @@ class ViewsTests(TestCase):
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
+            'image': forms.fields.ImageField,
         }
         for value, expected in form_fields.items():
             with self.subTest(value=value):

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
-{% block content %} 
+{% block content %}
+{% load thumbnail %}
         <h1>Все посты пользователя: {{ user_profile.get_full_name }} </h1>
         <h3>Всего постов: {{ user_profile.posts.count }} </h3>
         {% for post in page_obj %}

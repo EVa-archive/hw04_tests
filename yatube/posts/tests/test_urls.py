@@ -1,6 +1,7 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase, Client
 from http import HTTPStatus
+
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
 
 from ..models import Group, Post
 
@@ -26,6 +27,34 @@ class PostUrlTest(TestCase):
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(PostUrlTest.user)
+
+    def test_page_ctatus_code_authorized_client(self):
+        templates_url_names = {
+            '/': HTTPStatus.OK,
+            f'/group/{PostUrlTest.group.slug}/': HTTPStatus.OK,
+            f'/profile/{PostUrlTest.user.username}/': HTTPStatus.OK,
+            f'/posts/{PostUrlTest.post.id}/': HTTPStatus.OK,
+            f'/posts/{PostUrlTest.post.id}/edit/': HTTPStatus.OK,
+            '/create/': HTTPStatus.OK
+        }
+        for address, template in templates_url_names.items():
+            with self.subTest(address=address):
+                response = self.authorized_client.get(address)
+                self.assertEqual(response.status_code, template)
+
+    def test_page_ctatus_code_guest_client(self):
+        templates_url_names = {
+            '/': HTTPStatus.OK,
+            f'/group/{PostUrlTest.group.slug}/': HTTPStatus.OK,
+            f'/profile/{PostUrlTest.user.username}/': HTTPStatus.OK,
+            f'/posts/{PostUrlTest.post.id}/': HTTPStatus.OK,
+            f'/posts/{PostUrlTest.post.id}/edit/': HTTPStatus.FOUND,
+            '/create/': HTTPStatus.FOUND
+        }
+        for address, template in templates_url_names.items():
+            with self.subTest(address=address):
+                response = self.guest_client.get(address)
+                self.assertEqual(response.status_code, template)
 
     def test_url_exists_at_desired_location(self):
         """Страницы доступны любому пользователю."""

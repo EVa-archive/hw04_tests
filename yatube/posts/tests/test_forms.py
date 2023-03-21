@@ -1,9 +1,10 @@
 from http import HTTPStatus
+
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-from django.contrib.auth import get_user_model
 
-from posts.models import Post, Group
+from posts.models import Group, Post
 
 User = get_user_model()
 
@@ -59,6 +60,7 @@ class PostFormTests(TestCase):
 
     def test_cant_create_existing_slug(self):
         '''Проверка изменения поста в БД'''
+        posts_count = Post.objects.count()
         self.group_2 = Group.objects.create(
             title='Тестовая группа 2',
             slug='test_slug_2',
@@ -83,3 +85,6 @@ class PostFormTests(TestCase):
                             'Невозможно изменить содержание поста')
         self.assertNotEqual(self.post.group, form_data['group'],
                             'Невозможно изменить группу поста')
+        self.assertNotEqual(Post.objects.count(),
+                            posts_count + 1,
+                            'Поcт добавлен в БД')

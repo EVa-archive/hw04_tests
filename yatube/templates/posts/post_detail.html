@@ -35,11 +35,13 @@
           <p>
             {{ post.text }}
           </p>
+          <!-- эта кнопка видна только автору -->
           {% if post.author == request.user %}
           <a class="btn btn-primary" href="{% url 'posts:post_edit' post.id %}">
               Редактировать пост
             {% endif %}               
         </a>
+        {% include "includes/comment_form.html" %}
       </article>
       </div>
 {% endblock %}

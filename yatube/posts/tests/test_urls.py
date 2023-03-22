@@ -117,6 +117,20 @@ class PostUrlTest(TestCase):
         self.assertRedirects(
             response, f'/auth/login/?next=/posts/{PostUrlTest.post.id}/edit/')
 
+    def test_comment_url_redirect_anonymous_on_admin_login(self):
+        """При добавлении комментария анонимный пользователь
+        будет перенаправлен на страницу логина.
+        """
+        form_data = {
+            'text': 'Тестовый комментарий'
+        }
+        response = self.guest_client.post(
+            f'/posts/{PostUrlTest.post.id}/edit/',
+            data=form_data,
+        )
+        self.assertRedirects(
+            response, f'/auth/login/?next=/posts/{self.post.id}/edit/')
+
 
 class StaticUrlTest(TestCase):
     def setUp(self):

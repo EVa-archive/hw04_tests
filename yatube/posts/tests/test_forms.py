@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from posts.forms import PostForm
-from posts.models import Group, Post
+from posts.models import Group, Post, Comment
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -41,6 +41,7 @@ class PostFormTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
+        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(PostFormTests.user)
 
@@ -114,3 +115,27 @@ class PostFormTests(TestCase):
         self.assertNotEqual(Post.objects.count(),
                             posts_count + 1,
                             'Поcт добавлен в БД')
+
+    def test_add_comment_on_page(self):
+        '''Проверка добавления комментария на страницу поста'''
+        comment_count = Comment.objects.count()
+        self.assertEqual(0, comment_count)
+        form_data = {
+            'text': 'Тестовый комментарий'
+        }
+        response = self.authorized_client.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=form_data,
+        )
+        self.assertEqual(Comment.objects.count(), comment_count + 1,
+                         'Комментарий не добавлен в базу данных'
+                         )
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+
+    def test_no_edit_post(self):
+        '''Проверка запрета добавления комментария для
+            не авторизованного пользователя'''
+        comments_count = Comment.objects.count()
+        self.assertNotEqual(Comment.objects.count(),
+                            comments_count + 1,
+                            'Комментарий добавлен в базу данных')

@@ -3,8 +3,9 @@ from django import forms
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.core.cache import cache
 
-from ..models import Group, Post
+from ..models import Follow, Group, Post
 
 TEST_OF_POST: int = 13
 NUMB_FIRST_PAGE = 10
@@ -30,6 +31,9 @@ class ViewsTests(TestCase):
             email='noname@mail.com',
             password='123test',
         )
+        cls.user_2 = User.objects.create_user(
+            username='NoName_2',
+        )
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test_slug',
@@ -44,6 +48,22 @@ class ViewsTests(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(ViewsTests.user)
+
+    def tearDown(self):
+        super().tearDown()
+        cache.clear()
+
+    def test_cache_index(self):
+        """Проверка хранения и очищения кэша для index."""
+        response = self.authorized_client.get(reverse('posts:index'))
+        posts = response.content
+        Post.objects.create(text='Тестовый пост', author=self.user,)
+        old_posts = self.authorized_client.get(reverse('posts:index')).content
+        self.assertEqual(old_posts, posts)
+        cache.clear()
+        new_posts = self.authorized_client.get(reverse('posts:index')).content
+        self.assertNotEqual(old_posts, new_posts)
+        cache.clear()
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
@@ -78,8 +98,8 @@ class ViewsTests(TestCase):
                 response = self.authorized_client.get(value)
                 page_context = response.context.get('page_obj').object_list
                 expected = list(Post.objects.all())
-                error_name = 'Поста нет на странице'
-                self.assertEqual(page_context, expected, error_name)
+                self.assertEqual(page_context, expected,
+                                 'Поста нет на странице')
 
     def test_page2_show_correct_page_obj_context(self):
         """Пост при создании не добавляется в другую группу"""
@@ -128,6 +148,22 @@ class ViewsTests(TestCase):
         response = self.authorized_client.get(
             reverse('posts:post_edit', kwargs={'post_id': self.post.pk}))
         self._assert_post_response(response)
+
+    def test_add_subscription(self):
+        """Авторизованный пользователь может подписываться
+        на других пользователей и удалять их из подписок."""
+        Post.objects.create(text='Тестовый пост', author=self.user)
+        self.authorized_client.get('/profile/NoName_2/follow/')
+        self.assertEqual(Follow.objects.count(), 1)
+
+    def test_subscriber_feed(self):
+        """Новая запись пользователя в ленте подписок."""
+        post = Post.objects.create(text='Тестовый пост', author=self.user,)
+        response = self.authorized_client.get(
+            reverse('posts:profile',
+                    kwargs={'username': f'{self.user.username}'}))
+        profile = response.context['page_obj']
+        self.assertIn(post, profile, 'Новая запись в ленте не отображается')
 
 
 class PaginatorViewsTest(TestCase):
